@@ -51,20 +51,33 @@ user_code = st.text_input("Enter a legacy or current part code").strip()
 if user_code:
     legacy, current, match_type, confidence = find_exact_match(df_map, user_code)
     if legacy and current:
-        st.success(f"Match found ({match_type} code, confidence {confidence}%)")
+        st.markdown(
+    f"<div style='padding: 0.5em; background-color: #e6ffe6; border-left: 5px solid #33cc33;'>"
+    f"<strong>Match found:</strong> {match_type} code "
+    f"(confidence {confidence}%)</div>",
+    unsafe_allow_html=True
+)
         col1, col2 = st.columns(2)
         col1.markdown(f"**Legacy Code:** `{legacy}`")
         col2.markdown(f"**Current Code:** `{current}`")
         col1.button("📋 Copy Legacy", on_click=st.session_state.setdefault, args=("copy", legacy))
         col2.button("📋 Copy Current", on_click=st.session_state.setdefault, args=("copy", current))
     else:
-        st.warning("No exact match found. Here are some close suggestions:")
+        st.markdown(
+    "<div style='padding: 0.5em; background-color: #fff5cc; border-left: 5px solid #ffcc00;'>"
+    "<strong>No exact match found.</strong> Here are some close suggestions:</div>",
+    unsafe_allow_html=True
+)
         fuzzy_matches = find_fuzzy_matches(df_map, user_code)
         if fuzzy_matches:
             fuzzy_df = pd.DataFrame(fuzzy_matches)
             st.dataframe(fuzzy_df)
         else:
-            st.error("No similar codes found.")
+            st.markdown(
+    "<div style='padding: 0.5em; background-color: #ffe6e6; border-left: 5px solid #ff3333;'>"
+    "<strong>No similar codes found.</strong></div>",
+    unsafe_allow_html=True
+)
 
 st.divider()
 st.subheader("📄 Bulk Lookup (CSV Upload)")
