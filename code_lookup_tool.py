@@ -5,15 +5,6 @@ from difflib import get_close_matches
 
 st.set_page_config(page_title="Part Code Lookup", layout="wide")
 
-# (Password protection removed)
-# def # password_gate():
-    st.markdown("### 🔒 Private Tool – Login Required")
-    password = st.text_input("Enter password", type="password")
-    if password != "letmein":  # Change to your actual password
-        st.stop()
-
-# password_gate()
-
 @st.cache_data
 def load_mapping():
     df = pd.read_excel("mapping.xlsx")
