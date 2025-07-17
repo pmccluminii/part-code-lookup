@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from difflib import get_close_matches
@@ -18,11 +17,9 @@ def find_exact_match(df, code):
     if code_lc in df['Legacy_LC'].values:
         row = df[df['Legacy_LC'] == code_lc].iloc[0]
         return row['Legacy Code'], row['New Code'], "Legacy", 100
-
     if code_lc in df['New_LC'].values:
         row = df[df['New_LC'] == code_lc].iloc[0]
         return row['Legacy Code'], row['New Code'], "Current", 100
-
     return None, None, None, 0
 
 def find_fuzzy_matches(df, code, n=5, cutoff=0.6):
@@ -52,11 +49,11 @@ if user_code:
     legacy, current, match_type, confidence = find_exact_match(df_map, user_code)
     if legacy and current:
         st.markdown(
-    f"<div style='padding: 0.5em; background-color: #e6ffe6; border-left: 5px solid #33cc33;'>"
-    f"<strong>Match found:</strong> {match_type} code "
-    f"(confidence {confidence}%)</div>",
-    unsafe_allow_html=True
-)
+            f"<div style='padding: 0.5em; background-color: #e6ffe6; border-left: 5px solid #33cc33;'>"
+            f"<strong>Match found:</strong> {match_type} code "
+            f"(confidence {confidence}%)</div>",
+            unsafe_allow_html=True
+        )
         col1, col2 = st.columns(2)
         col1.markdown(f"**Legacy Code:** `{legacy}`")
         col2.markdown(f"**Current Code:** `{current}`")
@@ -64,45 +61,55 @@ if user_code:
         col2.button("📋 Copy Current", on_click=st.session_state.setdefault, args=("copy", current))
     else:
         st.markdown(
-    "<div style='padding: 0.5em; background-color: #fff5cc; border-left: 5px solid #ffcc00;'>"
-    "<strong>No exact match found.</strong> Here are some close suggestions:</div>",
-    unsafe_allow_html=True
-)
+            "<div style='padding: 0.5em; background-color: #fff5cc; border-left: 5px solid #ffcc00;'>"
+            "<strong>No exact match found.</strong> Here are some close suggestions:</div>",
+            unsafe_allow_html=True
+        )
         fuzzy_matches = find_fuzzy_matches(df_map, user_code)
         if fuzzy_matches:
             fuzzy_df = pd.DataFrame(fuzzy_matches)
             st.dataframe(fuzzy_df)
         else:
             st.markdown(
-    "<div style='padding: 0.5em; background-color: #ffe6e6; border-left: 5px solid #ff3333;'>"
-    "<strong>No similar codes found.</strong></div>",
-    unsafe_allow_html=True
-)
+                "<div style='padding: 0.5em; background-color: #ffe6e6; border-left: 5px solid #ff3333;'>"
+                "<strong>No similar codes found.</strong></div>",
+                unsafe_allow_html=True
+            )
 
 st.divider()
 st.subheader("📄 Bulk Lookup (CSV Upload)")
 bulk_file = st.file_uploader("Upload CSV with column 'Code' for bulk lookup", type=["csv"], key="bulk")
+
 if bulk_file:
     df_bulk = pd.read_csv(bulk_file)
-    df_bulk['Code'] = df_bulk['Code'].astype(str)
-    results = []
+    df_bulk.columns = df_bulk.columns.str.strip()  # clean whitespace
+    col_candidates = ['Code', 'code', 'part code', 'Part Code', 'Part_Code']
 
-    for code in df_bulk['Code']:
-        legacy, current, match_type, confidence = find_exact_match(df_map, code)
-        if not legacy and not current:
-            close = get_close_matches(code.lower(), pd.concat([df_map['Legacy_LC'], df_map['New_LC']]).dropna().unique(), n=1, cutoff=0.6)
-            if close:
-                row = df_map[(df_map['Legacy_LC'] == close[0]) | (df_map['New_LC'] == close[0])].iloc[0]
-                legacy, current = row['Legacy Code'], row['New Code']
-                match_type = "Fuzzy"
-                confidence = 80
-        results.append({
-            "Input Code": code,
-            "Match Type": match_type or "Not Found",
-            "Legacy Code": legacy or "",
-            "Current Code": current or "",
-            "Confidence": confidence
-        })
+    matched_col = next((col for col in df_bulk.columns if col.lower() in [c.lower() for c in col_candidates]), None)
 
-    st.download_button("📥 Download Results", pd.DataFrame(results).to_csv(index=False), "lookup_results.csv", "text/csv")
-    st.dataframe(pd.DataFrame(results))
+    if not matched_col:
+        st.error("❌ CSV must contain a column like 'Code'. Found columns: " + ", ".join(df_bulk.columns))
+    else:
+        df_bulk['Code'] = df_bulk[matched_col].astype(str)
+        results = []
+
+        for code in df_bulk['Code']:
+            legacy, current, match_type, confidence = find_exact_match(df_map, code)
+            if not legacy and not current:
+                close = get_close_matches(code.lower(), pd.concat([df_map['Legacy_LC'], df_map['New_LC']]).dropna().unique(), n=1, cutoff=0.6)
+                if close:
+                    row = df_map[(df_map['Legacy_LC'] == close[0]) | (df_map['New_LC'] == close[0])].iloc[0]
+                    legacy, current = row['Legacy Code'], row['New Code']
+                    match_type = "Fuzzy"
+                    confidence = 80
+            results.append({
+                "Input Code": code,
+                "Match Type": match_type or "Not Found",
+                "Legacy Code": legacy or "",
+                "Current Code": current or "",
+                "Confidence": confidence
+            })
+
+        df_results = pd.DataFrame(results)
+        st.download_button("📥 Download Results", df_results.to_csv(index=False), "lookup_results.csv", "text/csv")
+        st.dataframe(df_results)
