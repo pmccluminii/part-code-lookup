@@ -83,7 +83,7 @@ bulk_file = st.file_uploader("Upload CSV with column 'Code' for bulk lookup", ty
 if bulk_file:
     df_bulk = pd.read_csv(bulk_file)
     df_bulk.columns = df_bulk.columns.str.strip()  # clean whitespace
-    col_candidates = ['Code', 'code', 'part code', 'Part Code', 'Part_Code']
+    col_candidates = ['Code', 'code', 'part code', 'Part Code', 'Part_Code', 'codes', 'Codes', 'SKU', 'Order Code', 'order code', 'Order_Code']
 
     matched_col = next((col for col in df_bulk.columns if col.lower() in [c.lower() for c in col_candidates]), None)
 
